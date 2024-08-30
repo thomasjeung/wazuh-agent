@@ -31,6 +31,9 @@ protected:
         m_db->Insert(m_tableName,
                      {sqlite_manager::Col("Name", ColumnType::TEXT, "DummyData2"),
                       sqlite_manager::Col("Status", ColumnType::TEXT, "DummyData2")});
+        m_db->Insert(m_tableName,
+                     {sqlite_manager::Col("Name", ColumnType::TEXT, "DummyData3"),
+                      sqlite_manager::Col("Status", ColumnType::TEXT, "DummyData3")});
     }
 };
 
@@ -39,8 +42,10 @@ TEST_F(SQLiteManagerTest, CreateTableTest)
     sqlite_manager::Col col1 {"Id", sqlite_manager::ColumnType::INTEGER, true, true, true};
     sqlite_manager::Col col2 {"Name", sqlite_manager::ColumnType::TEXT, true, false};
     sqlite_manager::Col col3 {"Status", sqlite_manager::ColumnType::TEXT, true, false};
+    sqlite_manager::Col col4 {"Module", sqlite_manager::ColumnType::TEXT, false, false};
+    sqlite_manager::Col col5 {"Orden", sqlite_manager::ColumnType::INTEGER, false, false, false};
 
-    EXPECT_NO_THROW(m_db->CreateTable(m_tableName, {col1, col2, col3}));
+    EXPECT_NO_THROW(m_db->CreateTable(m_tableName, {col1, col2, col3, col4, col5}));
 }
 
 TEST_F(SQLiteManagerTest, InsertTest)
@@ -52,6 +57,16 @@ TEST_F(SQLiteManagerTest, InsertTest)
     EXPECT_NO_THROW(m_db->Insert(m_tableName,
                                  {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "ItemName2"),
                                   sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "ItemStatus2")}));
+    EXPECT_NO_THROW(m_db->Insert(m_tableName,
+                                 {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "ItemName3"),
+                                  sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "ItemStatus3"),
+                                  sqlite_manager::Col("Module", sqlite_manager::ColumnType::TEXT, "ItemModule3")}));
+
+    EXPECT_NO_THROW(m_db->Insert(m_tableName,
+                                 {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "ItemName4"),
+                                  sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "ItemStatus4"),
+                                  sqlite_manager::Col("Module", sqlite_manager::ColumnType::TEXT, "ItemModule4"),
+                                  sqlite_manager::Col("Orden", sqlite_manager::ColumnType::INTEGER, "16")}));
 }
 
 TEST_F(SQLiteManagerTest, GetCountTest)
@@ -134,14 +149,14 @@ TEST_F(SQLiteManagerTest, RemoveTest)
     AddTestData();
 
     int count = m_db->GetCount(m_tableName);
-    EXPECT_EQ(count, 3);
+    EXPECT_EQ(count, 4);
 
     // Remove a single record
     EXPECT_NO_THROW(m_db->Remove(m_tableName,
                                  {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "MyTestName"),
                                   sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "MyTestValue")}));
     count = m_db->GetCount(m_tableName);
-    EXPECT_EQ(count, 2);
+    EXPECT_EQ(count, 3);
 
     // Remove remaining records
     EXPECT_NO_THROW(m_db->Remove(m_tableName));
@@ -153,12 +168,25 @@ TEST_F(SQLiteManagerTest, UpdateTest)
 {
     AddTestData();
     EXPECT_NO_THROW(m_db->Update(m_tableName,
-                                 {sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "Updated status")},
+                                 {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "Updated name"),
+                                  sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "Updated status")},
                                  {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "MyTestName")}));
 
     auto ret =
-        m_db->Select(m_tableName, {}, {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "MyTestName")});
+        m_db->Select(m_tableName, {}, {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "Updated name")});
     DumpResults(ret);
+    EXPECT_EQ(ret.size(), 1);
+
+    EXPECT_NO_THROW(m_db->Update(m_tableName,
+                                 {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "Updated name2"),
+                                  sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "Updated status2")},
+                                 {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "Updated name"),
+                                  sqlite_manager::Col("Status", sqlite_manager::ColumnType::TEXT, "Updated status")}));
+
+    ret =
+        m_db->Select(m_tableName, {}, {sqlite_manager::Col("Name", sqlite_manager::ColumnType::TEXT, "Updated name2")});
+    DumpResults(ret);
+    EXPECT_EQ(ret.size(), 1);
 }
 
 TEST_F(SQLiteManagerTest, TransactionTest)
@@ -222,10 +250,16 @@ TEST_F(SQLiteManagerTest, TransactionTest)
 
 TEST_F(SQLiteManagerTest, DropTableTest)
 {
-    AddTestData();
-    EXPECT_NO_THROW(m_db->DropTable(m_tableName));
+    sqlite_manager::Col col1 {"Id", sqlite_manager::ColumnType::INTEGER, true, true, true};
+    sqlite_manager::Col col2 {"Name", sqlite_manager::ColumnType::TEXT, true, false};
+    sqlite_manager::Col col3 {"Status", sqlite_manager::ColumnType::TEXT, true, false};
+    sqlite_manager::Col col4 {"Module", sqlite_manager::ColumnType::TEXT, false, false};
+    sqlite_manager::Col col5 {"Orden", sqlite_manager::ColumnType::INTEGER, false, false, false};
 
-    auto ret = m_db->Select(m_tableName, {}, {});
+    EXPECT_NO_THROW(m_db->CreateTable("DropMe", {col1, col2, col3, col4, col5}));
+    EXPECT_NO_THROW(m_db->DropTable("DropMe"));
+
+    auto ret = m_db->Select("DropMe", {}, {});
 
     EXPECT_EQ(ret.size(), 0);
 }
